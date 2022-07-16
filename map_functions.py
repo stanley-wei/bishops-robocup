@@ -8,11 +8,11 @@ def ProcessMap(occupancy_grid, target_point):
     
     inverted_grid = InvertMap(extended_grid)
 
-    eroded_grid = ErodeMap(inverted_grid)
+    #eroded_grid = ErodeMap(inverted_grid)
     
     # square_grid = SquareMap(eroded_grid)
 
-    return eroded_grid
+    return inverted_grid
 
 def InvertMap(occupancy_grid):
     '''
@@ -63,8 +63,8 @@ def ExtendMap(occupancy_grid, target_point):
     elif(target_point.y < occupancy_grid.info.origin.position.y - occupancy_grid.info.resolution * occupancy_grid.info.width):
         to_add = np.ones((occupancy_grid.info.height, int((occupancy_grid.info.origin.position.y - occupancy_grid.info.resolution * occupancy_grid.info.width - target_point.y)/occupancy_grid.info.resolution) + 5))  
         occupancy_grid.data = np.concatenate((occupancy_grid.data, to_add), axis = 1) 
-        print(np.shape(to_add))
-        print(str(occupancy_grid.info.origin.position.y - occupancy_grid.info.resolution * occupancy_grid.info.width - target_point.y))
+        #print(np.shape(to_add))
+        #print(str(occupancy_grid.info.origin.position.y - occupancy_grid.info.resolution * occupancy_grid.info.width - target_point.y))
         occupancy_grid.info.width += np.shape(to_add)[1] 
     
     occupancy_grid.data = np.reshape(occupancy_grid.data, (occupancy_grid.info.height, occupancy_grid.info.width))
@@ -74,10 +74,10 @@ def ExtendMap(occupancy_grid, target_point):
     origin_new.y = origin_y
     origin_new.z = occupancy_grid.info.origin.position.z
     occupancy_grid.info.origin.position = origin_new
-    print(np.shape(occupancy_grid.data))
-    print(occupancy_grid.info.resolution)
-    print(occupancy_grid.info.origin.position)
-    print(target_point)
+    # print(np.shape(occupancy_grid.data))
+    # print(occupancy_grid.info.resolution)
+    # print(occupancy_grid.info.origin.position)
+    # print(target_point)
     return occupancy_grid
 
 def ErodeMap(occupancy_grid):

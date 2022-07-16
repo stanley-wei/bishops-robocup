@@ -1,4 +1,4 @@
-from geometry_msgs.msg import Point, Pose, PoseArray
+from geometry_msgs.msg import Point
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Image
 
@@ -11,27 +11,14 @@ import math
 def InitListeners():
 	global point_publisher
 
-	#poses_publisher = rospy.Publisher('object_depth/detection', Point, queue_size=5)
-	point_publisher = rospy.Publisher('object_depth/detection', Point, queue_size=5)
-
 	rospy.init_node('object_depth', anonymous=True)
 	rospy.Subscriber("/jetson_inference/detection", Point, find_point_depth)
 	rospy.Subscriber("/d400/depth/image_rect_raw", Image, update_depth_image)
 	rospy.Subscriber("/t265/odom/sample", Odometry, update_position)
 
+	point_publisher = rospy.Publisher('object_depth/detection', Point, queue_size=5)
+
 	rospy.spin()
-
-def unpack_pose_array(pose_array):
-	global poses_publisher
-
-	new_poses = PoseArray()
-	for i in range(len(pose_array.poses)):
-		point = find_point_depth(pose_array.poses[i].position)
-		if point != -1:
-			new_pose = Pose()
-			new_pose.position = point
-			new_poses.poses.append(new_pose)
-	poses_publisher.publish(new_poses)
 
 def find_point_depth(point):
 	global img
@@ -41,18 +28,14 @@ def find_point_depth(point):
 
 	depth_image_x = RoundTo((point.x / x_pixel_ratio), 1) + 120
 	depth_image_y = RoundTo((point.y / y_pixel_ratio), 1) + 90
-	class_id = point.z
 
 	#min_y = RoundTo((point.y / y_pixel_ratio), 1) + 90
 
-	if img.shape[0] != 1:
+	if img.shape[0] != 1 and point.z == 15:
 		found_depth = img[depth_image_y][depth_image_x]
-		point_pos = find_point_position(depth_image_x, found_depth, class_id)
-		return point_pos
-	else:
-		return -1
+		find_point_position(depth_image_x, found_depth)
 
-def find_point_position(point_x, depth, class_id):
+def find_point_position(point_x, depth):
 	global robot_position
 	global robot_orientation
 	global point_publisher
@@ -62,10 +45,9 @@ def find_point_position(point_x, depth, class_id):
 	to_publish = Point()
 	to_publish.x = robot_position.x + (depth / 1000) * math.cos(true_heading)
 	to_publish.y = robot_position.y + (depth / 1000) * math.sin(true_heading)
-	to_publish.z = class_id
+	to_publish.z = 0
 	
 	point_publisher.publish(to_publish)
-	return to_publish
 
 def update_depth_image(image):
 	global img

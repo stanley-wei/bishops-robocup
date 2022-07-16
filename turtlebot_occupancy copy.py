@@ -9,7 +9,6 @@ from pathfinding.finder.a_star import AStarFinder
 
 from nav_msgs.msg import OccupancyGrid, Odometry, Path, MapMetaData
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
-from std_msgs.msg import String
 
 from math_functions import *
 from map_functions import *
@@ -28,7 +27,7 @@ occupancy_metadata = MapMetaData()
 occupancy_origin = Pose()
 
 target_point = Point()
-drive_mode = ""
+
 
 def InitListeners():
     '''
@@ -45,12 +44,25 @@ def InitListeners():
     rospy.Subscriber("occupancy", OccupancyGrid, UpdateMap)
     rospy.Subscriber('/t265/odom/sample', Odometry, UpdateOdom) #https://docs.ros.org/en/melodic/api/nav_msgs/html/msg/Odometry.html
     rospy.Subscriber('turtlebot_controller/destination', Point, UpdateDest)
-    rospy.Subscriber('turtlebot_controller/mode', String, UpdateMode)
 
     path_publisher = rospy.Publisher('turtlebot_occupancy/path', Path, queue_size=5)
 
     rospy.sleep(0.5)
     rospy.spin()
+
+def UpdateOdom(odometry):
+    '''
+    Updates global robot position variable
+    '''
+    global robot_position
+    global robot_orientation
+
+    robot_position = odometry.pose.pose.position
+
+    # orientation_quaternion = odometry.pose.pose.orientation
+    # orientation_euler = QuaternionToEuler(orientation_quaternion)
+    # # print(orientation_euler)
+    # robot_orientation = orientation_euler
 
 def FindPath(maze, start, end):
     '''
@@ -85,39 +97,32 @@ def UpdateMap(occupancy_grid):
     occupancy_metadata = processed_grid.info
     occupancy_origin = occupancy_grid.info.origin.position
 
-    if drive_mode == "follower":
-        target_point = target_point
-
     robot_grid_position = PointToGridCoords(robot_position)
     target_grid_position = PointToGridCoords(target_point)
 
-    print("robot " + str(robot_position))
+    print("robot " + str(robot_grid_position))
     print(processed_grid.data[robot_grid_position[0], robot_grid_position[1]])
-    print("target: " + str(target_point))
+    print("target: " + str(target_grid_position))
     print(processed_grid.data[target_grid_position[0], target_grid_position[1]])
     # path = FindPath(np.ones((processed_grid.info.height, processed_grid.info.height)), robot_grid_position, target_grid_position)
-
     path = FindPath(np.reshape(occupancy_map, (processed_grid.info.height, processed_grid.info.width)), robot_grid_position, target_grid_position)
 
     path_message = Path()
     print("out")
     print(len(path[0]))
     # print(path[0])
-    if(len(path[0]) > 0):
-        for i in range(min(10, len(path[0]))):
-            to_add = PoseStamped()
-            to_add.header.seq = i
+    for i in range(min(10, len(path[0]))):
+        to_add = PoseStamped()
+        to_add.header.seq = i
 
-            pose_to_add = Pose()
-            pose_to_add.position = GridCoordsToPoint(path[0][i])
-            # pose_to_add.orientation = Quaternion(x = 0, y = 0, z = 0, w = 0)
-            to_add.pose = pose_to_add
+        pose_to_add = Pose()
+        pose_to_add.position = GridCoordsToPoint(path[0][i])
+        # pose_to_add.orientation = Quaternion(x = 0, y = 0, z = 0, w = 0)
+        to_add.pose = pose_to_add
 
-            path_message.poses.append(to_add)
+        path_message.poses.append(to_add)
 
-        print(str(i + 1) + " points added")
-    else:
-        print("no path")
+    print(str(i + 1) + " points added")
     path_publisher.publish(path_message)
 
 def PointToGridCoords(point):
@@ -144,25 +149,6 @@ def GridCoordsToPoint(point_2d):
     point.z = 0
 
     return point
-
-def UpdateOdom(odometry):
-    '''
-    Updates global robot position variable
-    '''
-    global robot_position
-    global robot_orientation
-
-    robot_position = odometry.pose.pose.position
-
-    # orientation_quaternion = odometry.pose.pose.orientation
-    # orientation_euler = QuaternionToEuler(orientation_quaternion)
-    # # print(orientation_euler)
-    # robot_orientation = orientation_euler
-
-def UpdateMode(mode):
-    global drive_mode
-
-    drive_mode = mode.data
 
 def UpdateDest(point):
     global target_point
